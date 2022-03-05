@@ -1,0 +1,93 @@
+// Communication with HX711 ADC
+//
+// Copyright (C) 2021 Konstantin Vogel <konstantin.vogel@gmx.net>
+//
+// This file may be distributed under the terms of the GNU GPLv3 license.
+
+#include "autoconf.h" // CONFIG_*
+#include "board/misc.h" // timer_from_us
+#include "command.h" // shutdown DECL_COMMAND
+#include "compiler.h" // ARRAY_SIZE
+#include "generic/armcm_timer.h" // udelay
+#include "sched.h" // sched_shutdown DECL_TASK
+#include "basecmd.h" // oid_alloc
+#include "board/gpio.h" // struct gpio_adc
+#include "board/irq.h" // irq_disable
+
+
+#define SAMPLE_INTERVAL (CONFIG_CLOCK_FREQ/80)
+#define COMM_DELAY (10*(CONFIG_CLOCK_FREQ/1000000))
+
+struct hx711 {
+    uint32_t oid;
+    int32_t sample;
+    uint32_t sample_idx;
+    uint32_t gain;
+    struct timer timer;
+    struct gpio_in dout;
+    struct gpio_out sck;
+};
+
+struct hx711 *hx711_1;
+
+
+
+static uint_fast8_t hx711_event(struct timer *timer)
+{
+    struct hx711 *h = hx711_1;
+    uint32_t out = 0;
+
+    if (h->sample_idx == 0 && gpio_in_read(h->dout)) { 
+        h->timer.waketime += 2*COMM_DELAY;
+    }
+    else if (h->sample_idx % 2) {
+        if (h->sample_idx < 48)
+            h->sample |= gpio_in_read(h->dout) << (31 - (h->sample_idx)/2);
+        h->sample_idx++;
+        h->timer.waketime += COMM_DELAY;
+    } 
+    else {
+        out = 1;
+        h->sample_idx++;
+        h->timer.waketime += COMM_DELAY;
+    }
+    if (h->sample_idx >= 48 + 2*h->gain){
+        uint32_t next_begin_time = h->timer.waketime + SAMPLE_INTERVAL;
+        sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid, next_begin_time, h->sample >> 8);
+        out = 0;
+        h->sample_idx = 0;
+        h->sample = 0;
+        h->timer.waketime = next_begin_time;
+    }
+    gpio_out_write(h->sck, out);
+    return SF_RESCHEDULE;
+}
+
+
+
+void command_config_hx711(uint32_t *args)
+{
+    struct hx711 *h = oid_alloc(args[0], command_config_hx711, sizeof(*h));
+    h->dout = gpio_in_setup(args[1], 1); // enable pullup
+    h->sck = gpio_out_setup(args[2], 0); // initialize as low
+    h->gain = args[3];
+    h->sample_idx = 0;
+    h->sample = 0;
+    h->oid = args[0];
+    hx711_1 = h;
+}
+DECL_COMMAND(command_config_hx711, "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u");
+
+
+
+void command_query_hx711(uint32_t *args)
+{
+    struct hx711 *h = oid_lookup(args[0], command_config_hx711);
+    sched_del_timer(&h->timer);
+    h->timer.func = hx711_event;
+    h->timer.waketime = timer_read_time() + CONFIG_CLOCK_FREQ/10;//args[1];
+    sched_add_timer(&h->timer);
+}
+DECL_COMMAND(command_query_hx711,
+             "query_hx711 oid=%c clock=%u sample_ticks=%u sample_count=%c"
+             " rest_ticks=%u min_value=%u max_value=%u range_check_count=%c");
