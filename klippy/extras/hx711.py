@@ -24,8 +24,12 @@ class MCU_hx711:
     def _build_config(self):
         self.mcu._serial.register_response(self._handle_adc_state,
             "hx711_in_state", self._oid)
-        self.mcu.add_config_cmd(f"config_hx711 oid={self._oid} dout_pin={self._main.dout_pin} sck_pin={self._main.sck_pin} gain={self._main.gain}")
-        self.mcu.add_config_cmd(f"query_hx711 oid={self._oid} clock={0} sample_ticks={0} sample_count={0} rest_ticks={0} min_value={0} max_value={0} range_check_count={0}")
+        self.mcu.add_config_cmd("config_hx711 oid=%d dout_pin=%s sck_pin=%s "
+            " gain=%d" % (self._oid, self._main.dout_pin, self._main.sck_pin,
+            self._main.gain) )
+        self.mcu.add_config_cmd("query_hx711 oid=%d clock=0 sample_ticks=0 "
+            " sample_count=0 rest_ticks=0 min_value=0 max_value=0 "
+            " range_check_count=0" % ( self._oid) )
     def setup_adc_callback(self, report_time, callback):
         if self._callback is not None:
             logging.exception("Hx711: ADC callback already configured")
@@ -48,7 +52,7 @@ class MCU_hx711:
         if self._callback:
             self._callback(self.mcu.estimated_print_time(self._last_time),
                 self._last_value)
-        logging.info(f"hx711 value is {self._last_value}")
+        logging.info("hx711 value is %d" % ( self._last_value ) )
 
 
 class PrinterHx711:
@@ -64,6 +68,9 @@ class PrinterHx711:
         self.mcu = dout_pin_params['chip']
         self.gain = config.getchoice('gain', {32: 2, 64: 3, 128: 1}, default=64)
         ppins.register_chip(self.name, self)
+
+        # TODO remove
+        self.setup_pin(None, None)
 
     def setup_pin(self, pin_type, pin_params):
         return MCU_hx711(self)
