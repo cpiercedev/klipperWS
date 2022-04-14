@@ -18,7 +18,7 @@ class WeighScale:
         self.ppins = self.printer.lookup_object('pins')
         self.mcu_adc = self.ppins.setup_pin('adc', self.pin_name)
         self.mcu_adc.setup_minmax(WS_SAMPLE_TIME, WS_SAMPLE_COUNT)
-        self.max_weight = config.get('max_weight')
+        self.max_weight = config.getfloat('max_weight')
         self.weight_subscribers = []
 
         self.calibrate_v1 = 0.
