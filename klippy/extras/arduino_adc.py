@@ -50,8 +50,8 @@ class MCU_ArduinoAdc:
           self.report_time = report_time
         self._callback = callback
 
-    def setup_minmax(self, sample_time, sample_count, minval=0., maxval=1.,
-                     range_check_count=0):
+    def setup_minmax(self, sample_time, sample_count, minval, maxval,
+                     range_check_count):
         pass
 
     def get_last_value(self):

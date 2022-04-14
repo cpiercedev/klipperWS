@@ -69,9 +69,6 @@ class PrinterHx711:
         self.gain = config.getchoice('gain', {32: 2, 64: 3, 128: 1}, default=64)
         ppins.register_chip(self.name, self)
 
-        # TODO remove
-        self.setup_pin(None, None)
-
     def setup_pin(self, pin_type, pin_params):
         return MCU_hx711(self)
 
