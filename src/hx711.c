@@ -37,7 +37,7 @@ static uint_fast8_t hx711_event(struct timer *timer)
     struct hx711 *h = hx711_1;
     uint32_t out = 0;
 
-    if (h->sample_idx == 0 && gpio_in_read(h->dout)) { 
+    if (h->sample_idx == 0 && gpio_in_read(h->dout)) {
         h->timer.waketime += 2*COMM_DELAY;
     }
     else if (h->sample_idx % 2) {
@@ -45,7 +45,7 @@ static uint_fast8_t hx711_event(struct timer *timer)
             h->sample |= gpio_in_read(h->dout) << (31 - (h->sample_idx)/2);
         h->sample_idx++;
         h->timer.waketime += COMM_DELAY;
-    } 
+    }
     else {
         out = 1;
         h->sample_idx++;
@@ -53,7 +53,8 @@ static uint_fast8_t hx711_event(struct timer *timer)
     }
     if (h->sample_idx >= 48 + 2*h->gain){
         uint32_t next_begin_time = h->timer.waketime + SAMPLE_INTERVAL;
-        sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid, next_begin_time, h->sample >> 8);
+        sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid,
+            next_begin_time, h->sample >> 8);
         out = 0;
         h->sample_idx = 0;
         h->sample = 0;
@@ -76,7 +77,8 @@ void command_config_hx711(uint32_t *args)
     h->oid = args[0];
     hx711_1 = h;
 }
-DECL_COMMAND(command_config_hx711, "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u");
+DECL_COMMAND(command_config_hx711,
+    "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u");
 
 
 
