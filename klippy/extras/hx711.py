@@ -25,8 +25,9 @@ class MCU_hx711:
         self.mcu._serial.register_response(self._handle_adc_state,
             "hx711_in_state", self._oid)
         self.mcu.add_config_cmd("config_hx711 oid=%d dout_pin=%s sck_pin=%s "
-            " gain=%d" % (self._oid, self._main.dout_pin, self._main.sck_pin,
-            self._main.gain) )
+            " gain=%d sample_interval=%d comm_delay=%d" % (self._oid,
+            self._main.dout_pin, self._main.sck_pin, self._main.gain,
+            self._main.sample_interval, self._main.comm_delay) )
         self.mcu.add_config_cmd("query_hx711 oid=%d clock=0 sample_ticks=0 "
             " sample_count=0 rest_ticks=0 min_value=0 max_value=0 "
             " range_check_count=0" % ( self._oid) )
@@ -67,6 +68,8 @@ class PrinterHx711:
         self.sck_pin = sck_pin_params['pin']
         self.mcu = dout_pin_params['chip']
         self.gain = config.getchoice('gain', {32: 2, 64: 3, 128: 1}, default=64)
+        self.sample_interval = config.getint('sample_interval', default=1)
+        self.comm_delay = config.getint('comm_delay', default=1)
         ppins.register_chip(self.name, self)
 
     def setup_pin(self, pin_type, pin_params):
