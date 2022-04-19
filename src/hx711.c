@@ -15,44 +15,41 @@
 #include "board/irq.h" // irq_disable
 
 
-#define SAMPLE_INTERVAL (CONFIG_CLOCK_FREQ/80)
-#define COMM_DELAY (10*(CONFIG_CLOCK_FREQ/1000000))
 
 struct hx711 {
     uint32_t oid;
     int32_t sample;
     uint32_t sample_idx;
     uint32_t gain;
+    uint32_t SAMPLE_INTERVAL;
+    uint32_t COMM_DELAY;
     struct timer timer;
     struct gpio_in dout;
     struct gpio_out sck;
 };
 
-struct hx711 *hx711_1;
-
-
 
 static uint_fast8_t hx711_event(struct timer *timer)
 {
-    struct hx711 *h = hx711_1;
+    struct hx711 *h = container_of(timer, struct hx711, timer);
     uint32_t out = 0;
 
     if (h->sample_idx == 0 && gpio_in_read(h->dout)) {
-        h->timer.waketime += 2*COMM_DELAY;
+        h->timer.waketime += 2*h->COMM_DELAY;
     }
     else if (h->sample_idx % 2) {
         if (h->sample_idx < 48)
             h->sample |= gpio_in_read(h->dout) << (31 - (h->sample_idx)/2);
         h->sample_idx++;
-        h->timer.waketime += COMM_DELAY;
+        h->timer.waketime += h->COMM_DELAY;
     }
     else {
         out = 1;
         h->sample_idx++;
-        h->timer.waketime += COMM_DELAY;
+        h->timer.waketime += h->COMM_DELAY;
     }
     if (h->sample_idx >= 48 + 2*h->gain){
-        uint32_t next_begin_time = h->timer.waketime + SAMPLE_INTERVAL;
+        uint32_t next_begin_time = h->timer.waketime + h->SAMPLE_INTERVAL;
         sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid,
             next_begin_time, h->sample >> 8);
         out = 0;
@@ -72,13 +69,16 @@ void command_config_hx711(uint32_t *args)
     h->dout = gpio_in_setup(args[1], 1); // enable pullup
     h->sck = gpio_out_setup(args[2], 0); // initialize as low
     h->gain = args[3];
+    h->SAMPLE_INTERVAL = args[4]*(CONFIG_CLOCK_FREQ/80);
+    h->COMM_DELAY = args[5]*(10*(CONFIG_CLOCK_FREQ/1000000));
     h->sample_idx = 0;
     h->sample = 0;
     h->oid = args[0];
     hx711_1 = h;
 }
 DECL_COMMAND(command_config_hx711,
-    "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u");
+    "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u"
+    " sample_interval=%u comm_delay=%u");
 
 
 
