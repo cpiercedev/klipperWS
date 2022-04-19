@@ -74,7 +74,6 @@ void command_config_hx711(uint32_t *args)
     h->sample_idx = 0;
     h->sample = 0;
     h->oid = args[0];
-    hx711_1 = h;
 }
 DECL_COMMAND(command_config_hx711,
     "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u"
