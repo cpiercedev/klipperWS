@@ -14,8 +14,6 @@
 #include "board/gpio.h" // struct gpio_adc
 #include "board/irq.h" // irq_disable
 
-
-
 struct hx711 {
     uint32_t oid;
     int32_t sample;
@@ -28,27 +26,34 @@ struct hx711 {
     struct gpio_out sck;
 };
 
-
 static uint_fast8_t hx711_event(struct timer *timer)
 {
     struct hx711 *h = container_of(timer, struct hx711, timer);
-    uint32_t out = 0;
+    uint32_t out = 0; // set clock low
 
+    // if first sample index and dout pin high, wait
     if (h->sample_idx == 0 && gpio_in_read(h->dout)) {
+        // no limit on acknowledgement of dout low
         h->timer.waketime += 2*h->COMM_DELAY;
     }
+    // if index odd read value and wait
     else if (h->sample_idx % 2) {
-        if (h->sample_idx < 48)
-            h->sample |= gpio_in_read(h->dout) << (31 - (h->sample_idx)/2);
+        if (h->sample_idx < 48){
+            uint8_t read_bit = gpio_in_read(h->dout);
+            h->sample = (h->sample << 1) | read_bit;
+        }
         h->sample_idx++;
         h->timer.waketime += h->COMM_DELAY;
     }
     else {
+        // if index even, set clock high
         out = 1;
         h->sample_idx++;
         h->timer.waketime += h->COMM_DELAY;
     }
     if (h->sample_idx >= 48 + 2*h->gain){
+        // set clock low for slow mcus, 60us high and hx711 goes to sleep
+        gpio_out_write(h->sck, out);
         uint32_t next_begin_time = h->timer.waketime + h->SAMPLE_INTERVAL;
         sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid,
             next_begin_time, h->sample >> 8);
@@ -62,24 +67,21 @@ static uint_fast8_t hx711_event(struct timer *timer)
 }
 
 
-
 void command_config_hx711(uint32_t *args)
 {
     struct hx711 *h = oid_alloc(args[0], command_config_hx711, sizeof(*h));
     h->dout = gpio_in_setup(args[1], 1); // enable pullup
     h->sck = gpio_out_setup(args[2], 0); // initialize as low
     h->gain = args[3];
-    h->SAMPLE_INTERVAL = args[4]*(CONFIG_CLOCK_FREQ/80);
+    h->SAMPLE_INTERVAL = args[4]*(CONFIG_CLOCK_FREQ/10);
     h->COMM_DELAY = args[5]*(10*(CONFIG_CLOCK_FREQ/1000000));
     h->sample_idx = 0;
     h->sample = 0;
     h->oid = args[0];
-    hx711_1 = h;
 }
 DECL_COMMAND(command_config_hx711,
     "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u"
     " sample_interval=%u comm_delay=%u");
-
 
 
 void command_query_hx711(uint32_t *args)
@@ -87,7 +89,7 @@ void command_query_hx711(uint32_t *args)
     struct hx711 *h = oid_lookup(args[0], command_config_hx711);
     sched_del_timer(&h->timer);
     h->timer.func = hx711_event;
-    h->timer.waketime = timer_read_time() + CONFIG_CLOCK_FREQ/10;//args[1];
+    h->timer.waketime = timer_read_time() + CONFIG_CLOCK_FREQ/80;//args[1];
     sched_add_timer(&h->timer);
 }
 DECL_COMMAND(command_query_hx711,
