@@ -32,6 +32,7 @@ static uint_fast8_t hx711_event(struct timer *timer)
     uint32_t out = 0; // set clock low
 
     // if first sample index and dout pin high, wait
+    // no limit on time to acknowledge hx711 read ready
     if (h->sample_idx == 0 && gpio_in_read(h->dout)) {
         // no limit on acknowledgement of dout low
         h->timer.waketime += 2*h->COMM_DELAY;
@@ -74,7 +75,7 @@ void command_config_hx711(uint32_t *args)
     h->sck = gpio_out_setup(args[2], 0); // initialize as low
     h->gain = args[3];
     h->SAMPLE_INTERVAL = args[4]*(CONFIG_CLOCK_FREQ/10);
-    h->COMM_DELAY = args[5]*(10*(CONFIG_CLOCK_FREQ/1000000));
+    h->COMM_DELAY = timer_from_us(args[5]);
     h->sample_idx = 0;
     h->sample = 0;
     h->oid = args[0];
