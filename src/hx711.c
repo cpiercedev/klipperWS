@@ -21,6 +21,7 @@ struct hx711 {
     uint32_t gain;
     uint32_t SAMPLE_INTERVAL;
     uint32_t COMM_DELAY;
+    uint32_t conversion_time;
     struct timer timer;
     struct gpio_in dout;
     struct gpio_out sck;
@@ -76,13 +77,14 @@ void command_config_hx711(uint32_t *args)
     h->gain = args[3];
     h->SAMPLE_INTERVAL = args[4]*(CONFIG_CLOCK_FREQ/10);
     h->COMM_DELAY = timer_from_us(args[5]);
+    h->conversion_time = CONFIG_CLOCK_FREQ/args[6];
     h->sample_idx = 0;
     h->sample = 0;
     h->oid = args[0];
 }
 DECL_COMMAND(command_config_hx711,
     "config_hx711 oid=%c dout_pin=%u sck_pin=%u gain=%u"
-    " sample_interval=%u comm_delay=%u");
+    " sample_interval=%u comm_delay=%u sps=%u");
 
 
 void command_query_hx711(uint32_t *args)
@@ -90,7 +92,7 @@ void command_query_hx711(uint32_t *args)
     struct hx711 *h = oid_lookup(args[0], command_config_hx711);
     sched_del_timer(&h->timer);
     h->timer.func = hx711_event;
-    h->timer.waketime = timer_read_time() + CONFIG_CLOCK_FREQ/80;//args[1];
+    h->timer.waketime = timer_read_time() + h->conversion_time; 
     sched_add_timer(&h->timer);
 }
 DECL_COMMAND(command_query_hx711,
