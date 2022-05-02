@@ -9,7 +9,7 @@ import logging
 
 class MCU_hx711:
 
-    def __init__(self, main):
+    def __init__(self, main, config):
         self._main = main
         self.reactor = main.printer.get_reactor()
         self.mcu = main.mcu
@@ -19,7 +19,10 @@ class MCU_hx711:
         self._callback = None
         self._oid = self.mcu.create_oid()
         self.mcu.register_config_callback(self._build_config)
-        query_adc = main.printer.lookup_object('query_adc')
+        try:
+            query_adc = main.printer.lookup_object('query_adc')
+        except:
+            query_adc = main.printer.load_object(config, 'query_adc')
         query_adc.register_adc(main.name, self)
     def _build_config(self):
         self.mcu._serial.register_response(self._handle_adc_state,
@@ -53,7 +56,8 @@ class MCU_hx711:
         if self._callback:
             self._callback(self.mcu.estimated_print_time(self._last_time),
                 self._last_value)
-        logging.info("hx711 value is %d" % ( self._last_value ) )
+        logging.info("hx711 value is %d \t%s" % ( self._last_value, bin(self._last_value) ) )
+
 
 
 class PrinterHx711:
@@ -70,10 +74,11 @@ class PrinterHx711:
         self.gain = config.getchoice('gain', {32: 2, 64: 3, 128: 1}, default=64)
         self.sample_interval = config.getint('sample_interval', default=1)
         self.comm_delay = config.getint('comm_delay', default=1)
+        self.config = config
         ppins.register_chip(self.name, self)
 
     def setup_pin(self, pin_type, pin_params):
-        return MCU_hx711(self)
+        return MCU_hx711(self, self.config)
 
 def load_config_prefix(config):
     return PrinterHx711(config)
