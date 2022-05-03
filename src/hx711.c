@@ -75,7 +75,7 @@ void command_config_hx711(uint32_t *args)
     h->dout = gpio_in_setup(args[1], 1); // enable pullup
     h->sck = gpio_out_setup(args[2], 0); // initialize as low
     h->gain = args[3];
-    h->SAMPLE_INTERVAL = (CONFIG_CLOCK_FREQ/[args[4]]);
+    h->SAMPLE_INTERVAL = (CONFIG_CLOCK_FREQ/args[4]);
     h->COMM_DELAY = timer_from_us(args[5]);
     h->conversion_time = CONFIG_CLOCK_FREQ/args[6];
     h->sample_idx = 0;
