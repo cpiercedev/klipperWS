@@ -92,7 +92,7 @@ void command_query_hx711(uint32_t *args)
     struct hx711 *h = oid_lookup(args[0], command_config_hx711);
     sched_del_timer(&h->timer);
     h->timer.func = hx711_event;
-    h->timer.waketime = timer_read_time() + h->conversion_time; 
+    h->timer.waketime = timer_read_time() + h->conversion_time;
     sched_add_timer(&h->timer);
 }
 DECL_COMMAND(command_query_hx711,
