@@ -53,6 +53,8 @@ class WeighScale:
                 logging.error("Please calibrate the scale with" \
                     " two different weights")
                 self.calibrated = False
+            elif (self.calibrate_weight2 == 0):
+                logging.error("Weight 2 must be a non-zero value.")
 
         # if calibration config is ok, calculate calibration vaules
         if self.calibrated:
