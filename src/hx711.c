@@ -56,6 +56,9 @@ static uint_fast8_t hx711_event(struct timer *timer)
     if (h->sample_idx == 0 && gpio_in_read(h->dout)) {
         // no limit on acknowledgement of dout low
         h->timer.waketime += 2*h->COMM_DELAY;
+        // hx711 not ready, lose place in line
+        h->have_lock = 0;
+        h_lock.locks--;
     }
     // if index odd read value and wait
     else if (h->sample_idx % 2) {
