@@ -56,7 +56,8 @@ class MCU_hx711:
         if self._callback:
             self._callback(self.mcu.estimated_print_time(self._last_time),
                 self._last_value)
-        logging.info("hx711 value is %d \t%s" % ( self._last_value, bin(self._last_value) ) )
+        logging.info("hx711 value is %d \t%s" % ( self._last_value,
+        bin(self._last_value) ) )
 
 
 
@@ -72,8 +73,8 @@ class PrinterHx711:
         self.sck_pin = sck_pin_params['pin']
         self.mcu = dout_pin_params['chip']
         self.gain = config.getchoice('gain', {32: 2, 64: 3, 128: 1}, default=64)
-        self.sps = config.getchoice('sps',{10: 10, 80: 80}, default=10)
-        self.sample_interval = config.getint('sample_interval', default=1)
+        self.sps = config.getchoice('board_freq',{10: 10, 80: 80}, default=10)
+        self.sample_interval = config.getfloat('sample_interval', default=1)
         self.comm_delay = config.getint('comm_delay', default=1)
         self.config = config
         ppins.register_chip(self.name, self)
