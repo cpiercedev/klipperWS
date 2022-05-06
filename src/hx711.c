@@ -42,6 +42,9 @@ static uint_fast8_t hx711_event(struct timer *timer)
     else if (h->sample_idx % 2) {
         if (h->sample_idx < 48){
             uint8_t read_bit = gpio_in_read(h->dout);
+            // handle twos compliment conversion from 24 to 32 bit
+            if((h->sample_idx == 1) && read_bit)
+                h->sample = 0xFF;
             h->sample = (h->sample << 1) | read_bit;
         }
         h->sample_idx++;
@@ -58,7 +61,7 @@ static uint_fast8_t hx711_event(struct timer *timer)
         gpio_out_write(h->sck, out);
         uint32_t next_begin_time = h->timer.waketime + h->SAMPLE_INTERVAL;
         sendf("hx711_in_state oid=%c next_clock=%u value=%i", h->oid,
-            next_begin_time, h->sample >> 8);
+            next_begin_time, h->sample);
         out = 0;
         h->sample_idx = 0;
         h->sample = 0;
