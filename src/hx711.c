@@ -14,6 +14,11 @@
 #include "board/gpio.h" // struct gpio_adc
 #include "board/irq.h" // irq_disable
 
+struct hx711_lock {
+   uint32_t available_time;
+   uint8_t locks;
+} h_lock = { 0, 0 };
+
 struct hx711 {
     uint32_t oid;
     int32_t sample;
@@ -25,12 +30,26 @@ struct hx711 {
     struct timer timer;
     struct gpio_in dout;
     struct gpio_out sck;
+    uint8_t have_lock;
 };
 
 static uint_fast8_t hx711_event(struct timer *timer)
 {
     struct hx711 *h = container_of(timer, struct hx711, timer);
     uint32_t out = 0; // set clock low
+
+    if (!h->have_lock && h_lock.locks){
+        // get in line
+        h_lock.locks++;
+        h->timer.waketime = h_lock.available_time;
+        h_lock.available_time += h->COMM_DELAY*(48+2*h->gain+3);
+        return SF_RESCHEDULE;
+    } else if (!h->have_lock){
+        // no locks, set lock and proceed
+        h_lock.locks++;
+        h_lock.available_time = timer_read_time() + h->COMM_DELAY*(48+2*h->gain+3);
+        h->have_lock = 1;
+    }
 
     // if first sample index and dout pin high, wait
     // no limit on time to acknowledge hx711 read ready
@@ -66,6 +85,9 @@ static uint_fast8_t hx711_event(struct timer *timer)
         h->sample_idx = 0;
         h->sample = 0;
         h->timer.waketime = next_begin_time;
+        // release locks
+        h_lock.locks--;
+        h->have_lock=0;
     }
     gpio_out_write(h->sck, out);
     return SF_RESCHEDULE;

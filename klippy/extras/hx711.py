@@ -56,8 +56,8 @@ class MCU_hx711:
         if self._callback:
             self._callback(self.mcu.estimated_print_time(self._last_time),
                 self._last_value)
-        logging.info("hx711 value is %d \t%s" % ( self._last_value,
-        bin(self._last_value) ) )
+        logging.info("hx711 %s value is %d \t%s" % ( self._main.name, self._last_value,
+            bin(self._last_value) ) )
 
 
 
